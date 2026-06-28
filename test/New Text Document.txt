@@ -1,0 +1,593 @@
+/**
+ * NutriPlan - Main Entry Point
+ * 
+ * This is the main entry point for the application.
+ * Import your modules and initialize the app here.
+ */
+
+`use strict`
+// ------li selector------
+const sectionsBtns = document.querySelectorAll('.space-y-1 li');
+const navLink = document.querySelectorAll('.nav-link');
+console.log(navLink);
+
+// -----first section-----
+const searchFiltersSection = document.querySelector('#search-filters-section');
+const mealCategoriesSection = document.querySelector('#meal-categories-section');
+const allRecipesSection = document.querySelector('#all-recipes-section');
+const mealDetails = document.querySelector('#meal-details');
+const recipesCount = document.querySelector('#recipes-count');
+const recipesGrid = document.querySelector('#recipes-grid');
+const backToMealsBtn = document.querySelector('#back-to-meals-btn');
+
+// ----second section-----
+const productsSection = document.querySelector('#products-section');
+
+// ----third section------
+const foodlogSection = document.querySelector('#foodlog-section');
+
+
+// ---- hide & unhide-----
+
+const active = ['bg-emerald-50', 'text-emerald-700']
+const unActive = ['text-gray-600', 'hover:bg-gray-50']
+sectionsBtns[0].addEventListener('click', () => {
+    navLink[0].classList.remove(...unActive);
+    navLink[0].classList.add(...active);
+
+    // Buttons 1 and 2 become Inactive
+    navLink[1].classList.remove(...active);
+    navLink[1].classList.add(...unActive);
+    navLink[2].classList.remove(...active);
+    navLink[2].classList.add(...unActive);
+
+
+    searchFiltersSection.classList.remove('hidden');
+    mealCategoriesSection.classList.remove('hidden');
+    allRecipesSection.classList.remove('hidden');
+
+
+    productsSection.classList.add('hidden');
+    foodlogSection.classList.add('hidden');
+})
+sectionsBtns[1].addEventListener('click', () => {
+    navLink[1].classList.remove(...unActive);
+    navLink[1].classList.add(...active);
+
+    // Buttons 0 and 2 become Inactive
+    navLink[0].classList.remove(...active);
+    navLink[0].classList.add(...unActive);
+    navLink[2].classList.remove(...active);
+    navLink[2].classList.add(...unActive);
+
+
+    searchFiltersSection.classList.add('hidden');
+    mealCategoriesSection.classList.add('hidden');
+    allRecipesSection.classList.add('hidden');
+    productsSection.classList.remove('hidden');
+    foodlogSection.classList.add('hidden');
+})
+sectionsBtns[2].addEventListener('click', () => {
+    navLink[2].classList.remove(...unActive);
+    navLink[2].classList.add(...active);
+
+    // Buttons 0 and 1 become Inactive
+    navLink[0].classList.remove(...active);
+    navLink[0].classList.add(...unActive);
+    navLink[1].classList.remove(...active);
+    navLink[1].classList.add(...unActive);
+
+
+    searchFiltersSection.classList.add('hidden');
+    mealCategoriesSection.classList.add('hidden');
+    allRecipesSection.classList.add('hidden');
+    productsSection.classList.add('hidden');
+    foodlogSection.classList.remove('hidden');
+})
+
+
+async function randomMeals(params) {
+    try {
+        const req = await fetch(`https://nutriplan-api.vercel.app/api/meals/random?count=${Math.floor(Math.random() * 25) + 1}`)
+        const data = await req.json()
+        console.log(data);
+
+        if (!data.results || data.results.length === 0) {
+            recipesCount.innerHTML = `Showing 0 recipes`;
+            recipesGrid.innerHTML = `<p class="text-gray-500 text-center py-8 col-span-full">No recipes found</p>`;
+            return;
+        }
+
+        recipesCount.innerHTML = `Showing ${data.results.length} recipes`;
+        let crtona = '';
+
+        for (let i = 0; i < data.results.length; i++) {
+            // 🌟 جعلنا الـ data-meal-id ديناميكي وليس ثابت
+            crtona += ` 
+            <div class="recipe-card bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer group"
+              data-meal-id="${data.results[i].id}"
+            >
+              <div class="relative h-48 overflow-hidden">
+                <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="${data.results[i].thumbnail}" alt="${data.results[i].name}" loading="lazy" />
+                <div class="absolute bottom-3 left-3 flex gap-2">
+                  <span class="px-2 py-1 bg-white/90 backdrop-blur-sm text-xs font-semibold rounded-full text-gray-700">${data.results[i].category}</span>
+                  <span class="px-2 py-1 bg-emerald-500 text-xs font-semibold rounded-full text-white">${data.results[i].area}</span>
+                </div>
+              </div>
+              <div class="p-4">
+                <h3 class="text-base font-bold text-gray-900 mb-1 group-hover:text-emerald-600 transition-colors line-clamp-1">${data.results[i].name}</h3>
+                <p class="text-xs text-gray-600 mb-3 line-clamp-2">${data.results[i].instructions || ''}</p>
+                <div class="flex items-center justify-between text-xs">
+                  <span class="font-semibold text-gray-900"><i class="fa-solid fa-utensils text-emerald-600 mr-1"></i> ${data.results[i].category}</span>
+                  <span class="font-semibold text-gray-500"><i class="fa-solid fa-globe text-blue-500 mr-1"></i> ${data.results[i].area}</span>
+                </div>
+              </div>
+            </div>`;
+        }
+        recipesGrid.innerHTML = crtona;
+
+
+        // 🌟 تعديل الـ Click Handler (Event Delegation حقيقي بدون تداخل)
+        // نقوم بإزالة أي مستمع قديم أولاً بـ cloneNode لمنع تكرار الأحداث مع كل حرف تكتبه
+        const oldGrid = recipesGrid;
+        const newGrid = oldGrid.cloneNode(true);
+        oldGrid.parentNode.replaceChild(newGrid, oldGrid);
+
+        // تحديث المتغير للـ grid الجديد
+        window.recipesGrid = newGrid;
+
+        newGrid.addEventListener('click', (e) => {
+            const clickedCard = e.target.closest('.recipe-card');
+            if (!clickedCard) return;
+
+            // تحويل الكروت الحالية إلى مصفوفة لمعرفة الاندكس
+            const allCardsArray = Array.from(newGrid.querySelectorAll('.recipe-card'));
+            const cardIndex = allCardsArray.indexOf(clickedCard);
+            const cardId = clickedCard.dataset.mealId;
+
+            console.log(`الـ Index هو: ${cardIndex}`);
+            console.log(`الـ ID هو: ${cardId}`);
+
+            // 1. التبديل بين الأقسام وإظهار شاشة التفاصيل فوراً عند الضغط
+            mealDetails.classList.remove('hidden');
+            allRecipesSection.classList.add('hidden');
+            mealCategoriesSection.classList.add('hidden');
+            searchFiltersSection.classList.add('hidden');
+
+            // 2. جلب بيانات الوجبة المحددة من الذاكرة بناءً على الـ index الصحيح
+            const selectedMeal = data.results[cardIndex];
+
+            // 3. طباعة الصورة بشكل صحيح باستخدام src وعرض الاسم
+            const detailImg = document.querySelector('#meal-details img');
+            const detailTitle = document.querySelector('#meal-details h1');
+            const detailCategory = document.querySelector('#meal-details .bg-emerald-500');
+            const detailArea = document.querySelector('#meal-details .bg-blue-500');
+            const detailIngNum = document.querySelector('h2 .text-gray-500');
+            const ing = document.querySelector('#newCartona')
+
+            console.log(selectedMeal);
+
+            if (detailImg) detailImg.src = selectedMeal.thumbnail;
+            if (detailTitle) detailTitle.textContent = selectedMeal.name;
+            if (detailCategory) detailCategory.textContent = selectedMeal.category;
+            if (detailArea) detailArea.textContent = selectedMeal.area;
+            if (detailIngNum) detailIngNum.textContent = selectedMeal.ingredients.length + ' items';
+            let newCartona = '';
+            for (let i = 0; i < selectedMeal.ingredients.length; i++) {
+                newCartona += `<div
+                    class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-emerald-50 transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      class="ingredient-checkbox w-5 h-5 text-emerald-600 rounded border-gray-300"
+                    />
+                    <span class="text-gray-700">
+                      <span class="font-medium text-gray-900">${selectedMeal.ingredients[i].measure}</span> ${selectedMeal.ingredients[i].ingredient}
+                    </span>
+                  </div>`
+
+            }
+            ing.innerHTML = newCartona;
+
+            let newCartonaInst = '';
+            for (let i = 0; i < selectedMeal.instructions.length; i++) {
+                const nums = i + 1
+                newCartonaInst += `<div
+                    class="flex gap-4 p-4 rounded-xl hover:bg-gray-50 transition-colors"
+                  >
+                    <div
+                      class="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold shrink-0"
+                    >
+                     ${nums}
+                    </div>
+                    <p class="text-gray-700 leading-relaxed pt-2">
+                     ${selectedMeal.instructions[i]}
+                    </p>
+                  </div>`
+
+            }
+            document.querySelector('.space-y-4').innerHTML = newCartonaInst;
+
+
+            // 1. دالة استخراج الـ ID المحدثة والمضمونة 100% لروابط اليوتيوب
+            function getYoutubeId(url) {
+                if (!url || typeof url !== 'string') return null;
+
+                // سحب الـ ID المكون من 11 حرفاً سواء كان الرابط يحتوي على watch?v= أو يحتوي على علامات & إضافية
+                const regExp = /^.*(?:(?:youtu\.be\/|v\/|vi\/|u\/\w\/|embed\/|shorts\/)|(?:(?:watch)?\?v(?:i)?=|\&v(?:i)?=))([^#\&\?]*).*/;
+                const match = url.match(regExp);
+
+                // التأكد من العثور على التطابق وأن طول الـ ID المستخرج يساوي 11 حرفاً بالضبط
+                return (match && match[1].length === 11) ? match[1] : null;
+            }
+
+            // 2. قراءة الرابط من السيرفر والبحث عن الحاوية في الـ HTML
+            const rawVideoUrl = selectedMeal.youtube || selectedMeal.strYoutube || selectedMeal.videoUrl;
+            const videoId = getYoutubeId(rawVideoUrl);
+            const videoContainer = document.querySelector('#video-container');
+
+            if (videoContainer) {
+                if (videoId) {
+                    console.log("🔥 نجاح! تم استخراج الـ ID الصحيح للفيديو وهو:", videoId);
+
+                    // حقن الـ iframe بالرابط السليم والمفتوح للتضمين
+                    videoContainer.innerHTML = `<iframe 
+  src="https://youtube.com/embed/${videoId}" 
+  class="w-full h-64 md:h-96 rounded-xl shadow-sm border-0" 
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+  allowfullscreen>
+</iframe>`;
+
+                } else {
+                    console.log("❌ فشل استخراج الـ ID من الرابط الحالي.");
+                    videoContainer.innerHTML = `
+            <div class="bg-gray-50 rounded-xl h-48 flex flex-col items-center justify-center text-gray-400 border border-dashed border-gray-200">
+                <i class="fa-solid fa-video-slash text-2xl mb-2"></i>
+                <p class="text-xs font-medium">No video tutorial available for this recipe</p>
+            </div>`;
+                }
+            }
+
+            // /**
+            //  * دالة إرسال وتحليل البيانات الغذائية
+            //  * @param {Object} data - البيانات المراد تحليلها (مثال: { ingredients: ["1 apple", "2 eggs"] })
+            //  */
+            // async function analyzeNutrition(data) {
+            //     const url = 'https://nutriplan-api.vercel.app/api/nutrition/analyze';
+
+            //     try {
+            //         const response = await fetch(url, {
+            //             method: 'POST',
+            //             headers: {
+            //                 'Content-Type': 'application/json',
+            //                 // أضف سطر الـ Authorization هنا إذا كانت الـ API تتطلب Token أو Key
+            //                 // 'Authorization': 'Bearer YOUR_TOKEN_HERE' 
+            //             },
+            //             body: JSON.stringify(data)
+            //         });
+
+            //         // التحقق من نجاح استجابة السيرفر (HTTP Status 200-299)
+            //         if (!response.ok) {
+            //             throw new Error(`خطأ في السيرفر: ${response.status}`);
+            //         }
+
+            //         const result = await response.json();
+            //         console.log("🔥 تم تحليل البيانات بنجاح:", result);
+            //         return result;
+
+            //     } catch (error) {
+            //         console.error("❌ فشل إرسال الطلب:", error.message);
+            //         return null;
+            //     }
+            // }
+
+            // // Data object containing the recipe details
+            // const recipePayload = {
+            //     "recipeName": `${selectedMeal.name}`,
+            //     "ingredients": [
+            //         "2 medium Fennel",
+            //         "2 tbs chopped Parsley",
+            //         "Juice of 1 Lemon",
+            //         "175g Cherry Tomatoes",
+            //         "1 tbs Olive Oil",
+            //         "350g Salmon",
+            //         "to serve Black Olives"
+            //     ]
+            // };
+
+            // // Executive call to execute the analysis
+            // analyzeNutrition(recipePayload);
+
+
+
+
+
+
+            console.log(selectedMeal.ingredients);
+
+        })}
+    catch {
+        console.log('random error');
+
+    }
+}
+
+randomMeals()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//--- search input & API----
+const searchInput = document.querySelector('#search-input');
+
+
+
+
+
+
+
+
+// --- API call-----
+
+// لضمان استقرار الأداء، ضع مستمع أحداث العودة للخلف (Back Button) بالخارج مرة واحدة فقط
+backToMealsBtn.addEventListener('click', () => {
+    mealDetails.classList.add('hidden');
+    allRecipesSection.classList.remove('hidden');
+    mealCategoriesSection.classList.remove('hidden');
+    searchFiltersSection.classList.remove('hidden');
+});
+
+searchInput.addEventListener('input', () => {
+    let findMeal = searchInput.value;
+
+    async function searchMeals(findMeal) {
+        try {
+            if (!findMeal.trim()) {
+                recipesGrid.innerHTML = '';
+                recipesCount.innerHTML = `Showing 0 recipes`;
+                return;
+            }
+
+            const req = await fetch(`https://nutriplan-api.vercel.app/api/meals/search?q=${findMeal}&page=1&limit=25`);
+            const data = await req.json();
+            console.log(data);
+
+            if (!data.results || data.results.length === 0) {
+                recipesCount.innerHTML = `Showing 0 recipes`;
+                recipesGrid.innerHTML = `<p class="text-gray-500 text-center py-8 col-span-full">No recipes found</p>`;
+                return;
+            }
+
+            recipesCount.innerHTML = `Showing ${data.results.length} recipes`;
+            let crtona = '';
+
+            for (let i = 0; i < data.results.length; i++) {
+                // 🌟 جعلنا الـ data-meal-id ديناميكي وليس ثابت
+                crtona += ` 
+            <div class="recipe-card bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer group"
+              data-meal-id="${data.results[i].id}"
+            >
+              <div class="relative h-48 overflow-hidden">
+                <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="${data.results[i].thumbnail}" alt="${data.results[i].name}" loading="lazy" />
+                <div class="absolute bottom-3 left-3 flex gap-2">
+                  <span class="px-2 py-1 bg-white/90 backdrop-blur-sm text-xs font-semibold rounded-full text-gray-700">${data.results[i].category}</span>
+                  <span class="px-2 py-1 bg-emerald-500 text-xs font-semibold rounded-full text-white">${data.results[i].area}</span>
+                </div>
+              </div>
+              <div class="p-4">
+                <h3 class="text-base font-bold text-gray-900 mb-1 group-hover:text-emerald-600 transition-colors line-clamp-1">${data.results[i].name}</h3>
+                <p class="text-xs text-gray-600 mb-3 line-clamp-2">${data.results[i].instructions || ''}</p>
+                <div class="flex items-center justify-between text-xs">
+                  <span class="font-semibold text-gray-900"><i class="fa-solid fa-utensils text-emerald-600 mr-1"></i> ${data.results[i].category}</span>
+                  <span class="font-semibold text-gray-500"><i class="fa-solid fa-globe text-blue-500 mr-1"></i> ${data.results[i].area}</span>
+                </div>
+              </div>
+            </div>`;
+            }
+            recipesGrid.innerHTML = crtona;
+
+            // 🌟 تعديل الـ Click Handler (Event Delegation حقيقي بدون تداخل)
+            // نقوم بإزالة أي مستمع قديم أولاً بـ cloneNode لمنع تكرار الأحداث مع كل حرف تكتبه
+            const oldGrid = recipesGrid;
+            const newGrid = oldGrid.cloneNode(true);
+            oldGrid.parentNode.replaceChild(newGrid, oldGrid);
+
+            // تحديث المتغير للـ grid الجديد
+            window.recipesGrid = newGrid;
+
+            newGrid.addEventListener('click', (e) => {
+                const clickedCard = e.target.closest('.recipe-card');
+                if (!clickedCard) return;
+
+                // تحويل الكروت الحالية إلى مصفوفة لمعرفة الاندكس
+                const allCardsArray = Array.from(newGrid.querySelectorAll('.recipe-card'));
+                const cardIndex = allCardsArray.indexOf(clickedCard);
+                const cardId = clickedCard.dataset.mealId;
+
+                console.log(`الـ Index هو: ${cardIndex}`);
+                console.log(`الـ ID هو: ${cardId}`);
+
+                // 1. التبديل بين الأقسام وإظهار شاشة التفاصيل فوراً عند الضغط
+                mealDetails.classList.remove('hidden');
+                allRecipesSection.classList.add('hidden');
+                mealCategoriesSection.classList.add('hidden');
+                searchFiltersSection.classList.add('hidden');
+
+                // 2. جلب بيانات الوجبة المحددة من الذاكرة بناءً على الـ index الصحيح
+                const selectedMeal = data.results[cardIndex];
+
+                // 3. طباعة الصورة بشكل صحيح باستخدام src وعرض الاسم
+                const detailImg = document.querySelector('#meal-details img');
+                const detailTitle = document.querySelector('#meal-details h1');
+                const detailCategory = document.querySelector('#meal-details .bg-emerald-500');
+                const detailArea = document.querySelector('#meal-details .bg-blue-500');
+                const detailIngNum = document.querySelector('h2 .text-gray-500');
+                const ing = document.querySelector('#newCartona')
+
+                console.log(selectedMeal);
+
+                if (detailImg) detailImg.src = selectedMeal.thumbnail;
+                if (detailTitle) detailTitle.textContent = selectedMeal.name;
+                if (detailCategory) detailCategory.textContent = selectedMeal.category;
+                if (detailArea) detailArea.textContent = selectedMeal.area;
+                if (detailIngNum) detailIngNum.textContent = selectedMeal.ingredients.length + ' items';
+                let newCartona = '';
+                for (let i = 0; i < selectedMeal.ingredients.length; i++) {
+                    newCartona += `<div
+                    class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-emerald-50 transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      class="ingredient-checkbox w-5 h-5 text-emerald-600 rounded border-gray-300"
+                    />
+                    <span class="text-gray-700">
+                      <span class="font-medium text-gray-900">${selectedMeal.ingredients[i].measure}</span> ${selectedMeal.ingredients[i].ingredient}
+                    </span>
+                  </div>`
+
+                }
+                ing.innerHTML = newCartona;
+
+                let newCartonaInst = '';
+                for (let i = 0; i < selectedMeal.instructions.length; i++) {
+                    const nums = i + 1
+                    newCartonaInst += `<div
+                    class="flex gap-4 p-4 rounded-xl hover:bg-gray-50 transition-colors"
+                  >
+                    <div
+                      class="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold shrink-0"
+                    >
+                     ${nums}
+                    </div>
+                    <p class="text-gray-700 leading-relaxed pt-2">
+                     ${selectedMeal.instructions[i]}
+                    </p>
+                  </div>`
+
+                }
+                document.querySelector('.space-y-4').innerHTML = newCartonaInst;
+
+
+                // 1. دالة استخراج الـ ID المحدثة والمضمونة 100% لروابط اليوتيوب
+                function getYoutubeId(url) {
+                    if (!url || typeof url !== 'string') return null;
+
+                    // سحب الـ ID المكون من 11 حرفاً سواء كان الرابط يحتوي على watch?v= أو يحتوي على علامات & إضافية
+                    const regExp = /^.*(?:(?:youtu\.be\/|v\/|vi\/|u\/\w\/|embed\/|shorts\/)|(?:(?:watch)?\?v(?:i)?=|\&v(?:i)?=))([^#\&\?]*).*/;
+                    const match = url.match(regExp);
+
+                    // التأكد من العثور على التطابق وأن طول الـ ID المستخرج يساوي 11 حرفاً بالضبط
+                    return (match && match[1].length === 11) ? match[1] : null;
+                }
+
+                // 2. قراءة الرابط من السيرفر والبحث عن الحاوية في الـ HTML
+                const rawVideoUrl = selectedMeal.youtube || selectedMeal.strYoutube || selectedMeal.videoUrl;
+                const videoId = getYoutubeId(rawVideoUrl);
+                const videoContainer = document.querySelector('#video-container');
+
+                if (videoContainer) {
+                    if (videoId) {
+                        console.log("🔥 نجاح! تم استخراج الـ ID الصحيح للفيديو وهو:", videoId);
+
+                        // حقن الـ iframe بالرابط السليم والمفتوح للتضمين
+                        videoContainer.innerHTML = `<iframe 
+  src="https://youtube.com/embed/${videoId}" 
+  class="w-full h-64 md:h-96 rounded-xl shadow-sm border-0" 
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+  allowfullscreen>
+</iframe>`;
+
+                    } else {
+                        console.log("❌ فشل استخراج الـ ID من الرابط الحالي.");
+                        videoContainer.innerHTML = `
+            <div class="bg-gray-50 rounded-xl h-48 flex flex-col items-center justify-center text-gray-400 border border-dashed border-gray-200">
+                <i class="fa-solid fa-video-slash text-2xl mb-2"></i>
+                <p class="text-xs font-medium">No video tutorial available for this recipe</p>
+            </div>`;
+                    }
+                }
+
+                // /**
+                //  * دالة إرسال وتحليل البيانات الغذائية
+                //  * @param {Object} data - البيانات المراد تحليلها (مثال: { ingredients: ["1 apple", "2 eggs"] })
+                //  */
+                // async function analyzeNutrition(data) {
+                //     const url = 'https://nutriplan-api.vercel.app/api/nutrition/analyze';
+
+                //     try {
+                //         const response = await fetch(url, {
+                //             method: 'POST',
+                //             headers: {
+                //                 'Content-Type': 'application/json',
+                //                 // أضف سطر الـ Authorization هنا إذا كانت الـ API تتطلب Token أو Key
+                //                 // 'Authorization': 'Bearer YOUR_TOKEN_HERE' 
+                //             },
+                //             body: JSON.stringify(data)
+                //         });
+
+                //         // التحقق من نجاح استجابة السيرفر (HTTP Status 200-299)
+                //         if (!response.ok) {
+                //             throw new Error(`خطأ في السيرفر: ${response.status}`);
+                //         }
+
+                //         const result = await response.json();
+                //         console.log("🔥 تم تحليل البيانات بنجاح:", result);
+                //         return result;
+
+                //     } catch (error) {
+                //         console.error("❌ فشل إرسال الطلب:", error.message);
+                //         return null;
+                //     }
+                // }
+
+                // // Data object containing the recipe details
+                // const recipePayload = {
+                //     "recipeName": `${selectedMeal.name}`,
+                //     "ingredients": [
+                //         "2 medium Fennel",
+                //         "2 tbs chopped Parsley",
+                //         "Juice of 1 Lemon",
+                //         "175g Cherry Tomatoes",
+                //         "1 tbs Olive Oil",
+                //         "350g Salmon",
+                //         "to serve Black Olives"
+                //     ]
+                // };
+
+                // // Executive call to execute the analysis
+                // analyzeNutrition(recipePayload);
+
+
+
+
+
+
+                console.log(selectedMeal.ingredients);
+            });
+
+        } catch (error) {
+            console.log(error);
+        }
+    }
+    searchMeals(findMeal);
+});
